@@ -87,9 +87,10 @@ COLUMNAS_VIATICOS = {
 }
 
 COLUMNAS_PARQUEADEROS = {
+    "FECHA",
     "PLACA",
-    "FECHA PARQUEADERO",
-    "TOTAL PARQUEADERO"
+    "CANTIDAD",
+    "TOTAL PARQUEADEROS"
 }
 
 COLUMNAS_PEAJES = {
@@ -118,6 +119,9 @@ def normalizar_encabezado(nombre):
     # KM EXTRA DESPUES DE 90 / 110 / 120...
     if nombre.startswith("KM EXTRA DESPUES DE"):
         return "KM EXTRA DESPUES DE"
+
+    if nombre == "TOTAL PARQUEADERO":
+        return "TOTAL PARQUEADEROS"
 
     return nombre
 
@@ -197,6 +201,8 @@ def leer_tabla(
         cerrar_excel(app, libro)
 
         return None, None
+
+
     # Buscar automáticamente la fila de encabezados
     fila_encabezado, columnas = buscar_encabezados(
         hoja,
@@ -487,6 +493,31 @@ def construir_dataframe_viaticos(df_origen, zona):
     df["PLACA"] = df_origen["PLACA"]
     df["FECHA VIATICOS"] = df_origen["FECHA VIATICOS"]
     df["TOTAL VIATICOS"] = df_origen["TOTAL VIATICOS"]
+
+    df = df.reset_index(drop=True)
+
+    return df
+
+# ==========================================================
+# CONSTRUIR DATAFRAME DESTINO PARQUEADEROS
+# ==========================================================
+
+def construir_dataframe_parqueaderos(df_origen, zona):
+
+    df_origen = df_origen.copy()
+
+    # Eliminar fila de total
+    df_origen = df_origen[
+        df_origen["PLACA"].astype(str).str.upper() != "TOTAL"
+    ]
+
+    df = pd.DataFrame(index=df_origen.index)
+
+    df["ZONA"] = zona
+    df["FECHA"] = df_origen["FECHA"]
+    df["PLACA"] = df_origen["PLACA"]
+    df["CANTIDAD"] = df_origen["CANTIDAD"]
+    df["TOTAL PARQUEADEROS"] = df_origen["TOTAL PARQUEADEROS"]
 
     df = df.reset_index(drop=True)
 

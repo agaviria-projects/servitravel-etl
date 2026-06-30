@@ -22,7 +22,8 @@ from excel_utils import (
 
 from consolidador import (
     consolidar_anio,
-    consolidar_viaticos
+    consolidar_viaticos,
+    consolidar_parqueaderos
 )
 
 
@@ -64,6 +65,8 @@ def main():
         consolidar_anio(libro)
 
         consolidar_viaticos(libro)
+
+        consolidar_parqueaderos(libro)
 
     except Exception as e:
 
