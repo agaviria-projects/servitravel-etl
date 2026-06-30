@@ -72,12 +72,30 @@ def cerrar_excel(app, libro):
 # BUSCAR FILA DE ENCABEZADOS
 # ==========================================================
 
-COLUMNAS_OBLIGATORIAS = {
+COLUMNAS_ANIO = {
     "PLACA",
     "TIPO",
     "FECHA",
     "INGRESO",
     "SALIDA"
+}
+
+COLUMNAS_VIATICOS = {
+    "PLACA",
+    "FECHA VIATICOS",
+    "TOTAL VIATICOS"
+}
+
+COLUMNAS_PARQUEADEROS = {
+    "PLACA",
+    "FECHA PARQUEADERO",
+    "TOTAL PARQUEADERO"
+}
+
+COLUMNAS_PEAJES = {
+    "PLACA",
+    "FECHA PEAJE",
+    "TOTAL PEAJE"
 }
 
 import re
@@ -103,7 +121,7 @@ def normalizar_encabezado(nombre):
 
     return nombre
 
-def buscar_encabezados(hoja):
+def buscar_encabezados(hoja, columnas_obligatorias):
     """
     Busca automáticamente la fila donde están los encabezados.
 
@@ -132,13 +150,13 @@ def buscar_encabezados(hoja):
 
             encabezados[nombre] = columna
 
-            if nombre in COLUMNAS_OBLIGATORIAS:
+            if nombre in columnas_obligatorias:
                 encontrados.add(nombre)
 
         # Si encontró todas las columnas obligatorias,
         # esta es la fila del encabezado.
 
-        if COLUMNAS_OBLIGATORIAS.issubset(encontrados):
+        if columnas_obligatorias.issubset(encontrados):
 
             print(f"✓ Encabezados encontrados en fila {fila}")
 
@@ -152,16 +170,38 @@ def buscar_encabezados(hoja):
 # LEER TABLA ORIGEN
 # ==========================================================
 
-def leer_tabla(archivo_excel):
+def leer_tabla(
+    archivo_excel,
+    nombre_hoja,
+    columnas_obligatorias
+):
 
     print(f"Leyendo: {archivo_excel.name}")
 
     app, libro = abrir_excel(archivo_excel)
 
-    hoja = libro.sheets[0]
+    try:
 
+        hoja = libro.sheets[nombre_hoja]
+
+    except Exception as e:
+
+        print(f"\n❌ Error al abrir la hoja '{nombre_hoja}'")
+        print(f"Detalle: {e}")
+
+        print("\n📋 Hojas disponibles:")
+
+        for hoja_libro in libro.sheets:
+            print(f"   - {hoja_libro.name}")
+
+        cerrar_excel(app, libro)
+
+        return None, None
     # Buscar automáticamente la fila de encabezados
-    fila_encabezado, columnas = buscar_encabezados(hoja)
+    fila_encabezado, columnas = buscar_encabezados(
+        hoja,
+        columnas_obligatorias
+    )
 
     # Obtener el rango real utilizado
     ultima_fila = hoja.used_range.last_cell.row
@@ -357,15 +397,13 @@ def obtener_zona(nombre_archivo):
 
 def obtener_columnas_destino(hoja):
     """
-    Busca automáticamente los encabezados de la hoja destino
-    (AÑO 2026 del INFORME_LIQUIDACION.xlsb)
-
-    Retorna:
-        fila_encabezado
-        columnas
+    Busca los encabezados del consolidado AÑO 2026.
     """
 
-    return buscar_encabezados(hoja)
+    return buscar_encabezados(
+        hoja,
+        COLUMNAS_ANIO
+    )
 
 def construir_dataframe_destino(df_origen, zona):
 
@@ -427,5 +465,29 @@ def construir_dataframe_destino(df_origen, zona):
             "OBSERVACION",
         ]
     ]
+
+    return df
+
+# ==========================================================
+# CONSTRUIR DATAFRAME DESTINO VIATICOS
+# ==========================================================
+
+def construir_dataframe_viaticos(df_origen, zona):
+
+    df_origen = df_origen.copy()
+
+    # Eliminar fila de total
+    df_origen = df_origen[
+        df_origen["PLACA"].astype(str).str.upper() != "TOTAL"
+    ]
+
+    df = pd.DataFrame(index=df_origen.index)
+
+    df["ZONA"] = zona
+    df["PLACA"] = df_origen["PLACA"]
+    df["FECHA VIATICOS"] = df_origen["FECHA VIATICOS"]
+    df["TOTAL VIATICOS"] = df_origen["TOTAL VIATICOS"]
+
+    df = df.reset_index(drop=True)
 
     return df
