@@ -26,7 +26,12 @@ from consolidador import (
     consolidar_parqueaderos
 )
 
-
+from consolidador import (
+    consolidar_anio,
+    consolidar_viaticos,
+    consolidar_parqueaderos,
+    consolidar_peajes
+)
 # ==========================================================
 # MAIN
 # ==========================================================
@@ -67,6 +72,8 @@ def main():
         consolidar_viaticos(libro)
 
         consolidar_parqueaderos(libro)
+
+        consolidar_peajes(libro)
 
     except Exception as e:
 

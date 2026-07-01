@@ -94,11 +94,11 @@ COLUMNAS_PARQUEADEROS = {
 }
 
 COLUMNAS_PEAJES = {
+    "FECHA",
     "PLACA",
-    "FECHA PEAJE",
-    "TOTAL PEAJE"
+    "CANT PEAJES",
+    "VALOR PEAJE"
 }
-
 import re
 
 # ==========================================================
@@ -159,6 +159,9 @@ def buscar_encabezados(hoja, columnas_obligatorias):
 
         # Si encontró todas las columnas obligatorias,
         # esta es la fila del encabezado.
+
+        # if fila <= 10:
+        #     print(f"\nFila {fila}: {encabezados}")
 
         if columnas_obligatorias.issubset(encontrados):
 
@@ -367,7 +370,28 @@ def obtener_mes(fecha):
 
         return ""
 
+# ==========================================================
+# OBTENER CORTE
+# ==========================================================
 
+def obtener_corte(fecha):
+
+    if pd.isna(fecha):
+
+        return ""
+
+    try:
+
+        fecha = pd.to_datetime(fecha)
+
+        if fecha.day <= 15:
+            return "1 CORTE"
+
+        return "2 CORTE"
+
+    except Exception:
+
+        return ""
 # ==========================================================
 # OBTENER ZONA
 # ==========================================================
@@ -522,3 +546,80 @@ def construir_dataframe_parqueaderos(df_origen, zona):
     df = df.reset_index(drop=True)
 
     return df
+
+# ==========================================================
+# CONSTRUIR DATAFRAME DESTINO PEAJES
+# ==========================================================
+
+def construir_dataframe_peajes(df_origen, zona):
+
+    df_origen = df_origen.copy()
+
+    # Eliminar fila de total
+    df_origen = df_origen[
+        df_origen["PLACA"].astype(str).str.upper() != "TOTAL"
+    ]
+
+    df = pd.DataFrame(index=df_origen.index)
+
+    df["ZONA"] = zona
+
+    df["FECHA EN LA QUE SE CAUSA EL PEAJE"] = df_origen["FECHA"]
+
+    df["PLACA"] = df_origen["PLACA"]
+
+    df["CORTE EN EL QUE SE FACTURA"] = (
+        df_origen["FECHA"].apply(obtener_corte)
+    )
+
+    df["MES EN EL QUE SE FACTURA"] = (
+        df_origen["FECHA"].apply(obtener_mes)
+    )
+
+    df["CANTIDAD PEAJES"] = df_origen["CANT PEAJES"]
+
+    df["VALOR PEAJE"] = df_origen["VALOR PEAJE"]
+
+    df["TOTAL PEAJES"] = (
+        pd.to_numeric(df["CANTIDAD PEAJES"], errors="coerce").fillna(0)
+        *
+        pd.to_numeric(df["VALOR PEAJE"], errors="coerce").fillna(0)
+    )
+    # ======================================================
+    # REORDENAR COLUMNAS
+    # ======================================================
+
+    df = df[
+        [
+            "ZONA",
+            "FECHA EN LA QUE SE CAUSA EL PEAJE",
+            "PLACA",
+            "CORTE EN EL QUE SE FACTURA",
+            "MES EN EL QUE SE FACTURA",
+            "CANTIDAD PEAJES",
+            "VALOR PEAJE",
+            "TOTAL PEAJES",
+        ]
+    ]
+
+    df = df.reset_index(drop=True)
+
+    return df
+
+# ==========================================================
+# IMPRIMIR RESUMEN
+# ==========================================================
+
+def imprimir_resumen(nombre, resumen_zonas, total_registros):
+
+    print("\n" + "=" * 60)
+    print(f"RESUMEN {nombre}")
+    print("=" * 60)
+
+    for zona, cantidad in resumen_zonas.items():
+
+        print(f"{zona:<15} : {cantidad:>5} registros")
+
+    print("-" * 60)
+    print(f"{'TOTAL':<15} : {total_registros:>5} registros")
+    print("=" * 60)
